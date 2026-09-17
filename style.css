@@ -1,0 +1,1150 @@
+/* ==========================================
+   MOVIEBUZZ - FINAL STYLE SHEET
+   Green + White Movie Website
+========================================== */
+
+
+/* ==========================================
+   RESET
+========================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background:
+        linear-gradient(
+            135deg,
+            #f0fdf4,
+            #ffffff
+        );
+    color: #17251c;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+
+/* ==========================================
+   NAVBAR
+========================================== */
+
+.navbar {
+    width: 100%;
+    padding: 20px 7%;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    background: rgba(255, 255, 255, 0.96);
+
+    border-bottom: 1px solid #bbf7d0;
+
+    position: sticky;
+    top: 0;
+
+    z-index: 100;
+
+    backdrop-filter: blur(10px);
+}
+
+.logo {
+    font-size: 1.6rem;
+    font-weight: 800;
+
+    color: #166534;
+
+    letter-spacing: 0.5px;
+}
+
+.navbar nav {
+    display: flex;
+    gap: 28px;
+}
+
+.navbar nav a {
+    color: #374151;
+
+    font-weight: 600;
+
+    transition: 0.3s;
+}
+
+.navbar nav a:hover {
+    color: #16a34a;
+}
+
+
+/* ==========================================
+   HOME PAGE
+========================================== */
+
+.home-page {
+    min-height: calc(100vh - 150px);
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+.hero-section {
+    min-height: 650px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+
+    padding: 80px 20px;
+
+    position: relative;
+
+    z-index: 2;
+}
+
+
+/* ==========================================
+   MOVIE SYMBOL
+========================================== */
+
+.movie-symbol {
+    font-size: 5.5rem;
+
+    margin-bottom: 20px;
+
+    animation:
+        floatMovie 3s ease-in-out infinite;
+
+    filter:
+        drop-shadow(
+            0 10px 20px
+            rgba(22, 163, 74, 0.25)
+        );
+}
+
+.hero-section h1 {
+    font-size:
+        clamp(
+            3rem,
+            8vw,
+            5.5rem
+        );
+
+    font-weight: 900;
+
+    color: #166534;
+
+    letter-spacing: -2px;
+}
+
+.hero-section h1 span {
+    color: #16a34a;
+}
+
+.tagline {
+    margin-top: 15px;
+
+    color: #64748b;
+
+    font-size: 1.1rem;
+
+    letter-spacing: 1px;
+}
+
+
+/* ==========================================
+   SEARCH BOX
+========================================== */
+
+.search-box {
+    width: min(650px, 100%);
+
+    display: flex;
+
+    gap: 12px;
+
+    margin-top: 40px;
+
+    background: #ffffff;
+
+    padding: 8px;
+
+    border-radius: 18px;
+
+    border: 2px solid #bbf7d0;
+
+    box-shadow:
+        0 8px 30px
+        rgba(22, 163, 74, 0.15);
+}
+
+.search-box input {
+    flex: 1;
+
+    min-width: 0;
+
+    border: none;
+
+    outline: none;
+
+    padding: 16px;
+
+    font-size: 1rem;
+
+    color: #17251c;
+
+    background: transparent;
+}
+
+.search-box input::placeholder {
+    color: #9ca3af;
+}
+
+
+/* ==========================================
+   SEARCH BUTTON
+========================================== */
+
+.search-button {
+    border: none;
+
+    background: #16a34a;
+
+    color: #ffffff;
+
+    padding: 0 25px;
+
+    border-radius: 12px;
+
+    font-weight: 700;
+
+    transition:
+        0.3s;
+
+    box-shadow:
+        0 0 0
+        rgba(22, 163, 74, 0);
+}
+
+.search-button:hover {
+    background: #15803d;
+
+    box-shadow:
+        0 0 20px
+        rgba(22, 163, 74, 0.65);
+
+    transform:
+        translateY(-2px);
+}
+
+
+/* ==========================================
+   CONTINUE BUTTON
+========================================== */
+
+.continue-button {
+    margin-top: 20px;
+
+    padding: 14px 55px;
+
+    border: none;
+
+    border-radius: 12px;
+
+    background: #6b7280;
+
+    color: #ffffff;
+
+    font-weight: 700;
+
+    font-size: 1rem;
+
+    transition:
+        0.3s;
+
+    box-shadow:
+        0 0 0
+        rgba(107, 114, 128, 0);
+}
+
+.continue-button:hover {
+    background: #4b5563;
+
+    box-shadow:
+        0 0 22px
+        rgba(107, 114, 128, 0.6);
+
+    transform:
+        translateY(-2px);
+}
+
+.continue-button:active,
+.search-button:active {
+    transform:
+        scale(0.97);
+}
+
+button:disabled {
+    opacity: 0.7;
+
+    cursor: wait;
+}
+
+
+/* ==========================================
+   SEARCH MESSAGE
+========================================== */
+
+.search-message {
+    margin-top: 20px;
+
+    text-align: center;
+
+    color: #dc2626;
+
+    font-weight: 600;
+}
+
+
+/* ==========================================
+   FLOATING MOVIE SYMBOLS
+========================================== */
+
+.floating-symbol {
+    position: absolute;
+
+    font-size: 3rem;
+
+    opacity: 0.12;
+
+    pointer-events: none;
+
+    animation:
+        floatBackground
+        6s ease-in-out infinite;
+}
+
+.symbol-one {
+    top: 15%;
+    left: 8%;
+}
+
+.symbol-two {
+    top: 30%;
+    right: 10%;
+
+    animation-delay: 1.5s;
+}
+
+.symbol-three {
+    bottom: 15%;
+    left: 15%;
+
+    animation-delay: 3s;
+}
+
+
+/* ==========================================
+   ANIMATIONS
+========================================== */
+
+@keyframes floatMovie {
+
+    0%,
+    100% {
+        transform:
+            translateY(0)
+            rotate(0deg);
+    }
+
+    50% {
+        transform:
+            translateY(-12px)
+            rotate(3deg);
+    }
+}
+
+@keyframes floatBackground {
+
+    0%,
+    100% {
+        transform:
+            translateY(0)
+            rotate(-5deg);
+    }
+
+    50% {
+        transform:
+            translateY(-25px)
+            rotate(5deg);
+    }
+}
+
+
+/* ==========================================
+   HOME MOVIE RESULT
+========================================== */
+
+.home-result {
+    width: min(1100px, 92%);
+
+    margin:
+        0 auto 60px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+
+/* ==========================================
+   MOVIE CARD
+========================================== */
+
+.movie-card {
+    width: 100%;
+
+    max-width: 1050px;
+
+    margin: 40px auto;
+
+    padding: 30px;
+
+    display: flex;
+
+    gap: 30px;
+
+    background: #ffffff;
+
+    border-radius: 22px;
+
+    border:
+        1px solid
+        #bbf7d0;
+
+    box-shadow:
+        0 10px 35px
+        rgba(0, 0, 0, 0.12),
+
+        0 0 25px
+        rgba(22, 163, 74, 0.18);
+
+    animation:
+        movieCardAppear
+        0.5s ease;
+}
+
+@keyframes movieCardAppear {
+
+    from {
+        opacity: 0;
+
+        transform:
+            translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+
+        transform:
+            translateY(0);
+    }
+}
+
+
+/* ==========================================
+   POSTER CONTAINER
+========================================== */
+
+.movie-poster-container {
+    width: 260px;
+
+    min-width: 260px;
+
+    text-align: center;
+}
+
+
+/* ==========================================
+   REAL MOVIE POSTER
+========================================== */
+
+.real-movie-poster {
+    width: 260px;
+
+    height: 380px;
+
+    object-fit: cover;
+
+    display: block;
+
+    border:
+        3px solid
+        #16a34a;
+
+    border-radius: 18px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #e8f8ee,
+            #ffffff
+        );
+
+    box-shadow:
+        0 10px 30px
+        rgba(0, 0, 0, 0.18),
+
+        0 0 25px
+        rgba(22, 163, 74, 0.25);
+
+    transition:
+        0.3s;
+}
+
+.real-movie-poster:hover {
+    transform:
+        scale(1.02);
+
+    box-shadow:
+        0 15px 35px
+        rgba(0, 0, 0, 0.20),
+
+        0 0 30px
+        rgba(22, 163, 74, 0.35);
+}
+
+
+/* ==========================================
+   POSTER PLACEHOLDER
+========================================== */
+
+.movie-poster-placeholder {
+    width: 260px;
+
+    min-width: 260px;
+
+    height: 380px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
+
+    background:
+        linear-gradient(
+            135deg,
+            #e8f8ee,
+            #ffffff
+        );
+
+    border:
+        3px solid
+        #16a34a;
+
+    border-radius: 18px;
+
+    text-align: center;
+
+    overflow: hidden;
+}
+
+.poster-icon {
+    font-size: 80px;
+
+    margin-bottom: 20px;
+}
+
+.movie-poster-placeholder p {
+    color: #166534;
+
+    font-size: 20px;
+
+    font-weight: 700;
+
+    padding: 15px;
+}
+
+
+/* ==========================================
+   POSTER SOURCE
+========================================== */
+
+.poster-source {
+    display: inline-block;
+
+    margin-top: 10px;
+
+    color: #166534;
+
+    font-size: 13px;
+
+    text-decoration: none;
+}
+
+.poster-source:hover {
+    text-decoration: underline;
+
+    color: #16a34a;
+}
+
+
+/* ==========================================
+   MOVIE INFORMATION
+========================================== */
+
+.movie-information {
+    flex: 1;
+
+    min-width: 0;
+}
+
+.movie-information h2 {
+    color: #166534;
+
+    font-size: 34px;
+
+    margin-top: 0;
+
+    margin-bottom: 18px;
+}
+
+.movie-information p {
+    font-size: 18px;
+
+    line-height: 1.6;
+
+    margin: 12px 0;
+}
+
+.movie-information h3 {
+    color: #16a34a;
+
+    margin-top: 25px;
+
+    margin-bottom: 10px;
+}
+
+.movie-information ul {
+    padding-left: 25px;
+}
+
+.movie-information li {
+    margin: 8px 0;
+
+    font-size: 17px;
+}
+
+
+/* ==========================================
+   REQUESTED COLOURS
+========================================== */
+
+.director {
+    color: #ff1493;
+
+    font-weight: bold;
+}
+
+.hero,
+.heroine {
+    color: #0077ff;
+
+    font-weight: bold;
+}
+
+.choreographer {
+    color: #800080;
+
+    font-weight: bold;
+}
+
+.release-date {
+    color: #000000;
+
+    font-weight: bold;
+}
+
+.collection {
+    color: #e00000;
+
+    font-weight: bold;
+}
+
+
+/* ==========================================
+   DESCRIPTION
+========================================== */
+
+.description {
+    line-height: 1.8;
+
+    color: #4b5563;
+}
+
+
+/* ==========================================
+   ERROR BOX
+========================================== */
+
+.error-box {
+    width: 90%;
+
+    max-width: 700px;
+
+    margin: 30px auto;
+
+    padding: 25px;
+
+    background: #fff0f0;
+
+    border:
+        2px solid
+        #ff3333;
+
+    border-radius: 15px;
+
+    color: #b00000;
+
+    box-shadow:
+        0 8px 25px
+        rgba(220, 38, 38, 0.10);
+}
+
+.error-box h3 {
+    margin-bottom: 10px;
+}
+
+
+/* ==========================================
+   MOVIE DETAIL PAGE
+========================================== */
+
+.movie-detail-card {
+    background: #ffffff;
+
+    border-radius: 24px;
+
+    padding: 35px;
+
+    border:
+        1px solid
+        #bbf7d0;
+
+    box-shadow:
+        0 10px 30px
+        rgba(22, 163, 74, 0.12);
+}
+
+.movie-detail-header {
+    text-align: center;
+
+    margin-bottom: 30px;
+}
+
+.movie-detail-header h1 {
+    font-size: 2.5rem;
+
+    color: #166534;
+}
+
+.movie-detail-header p {
+    color: #6b7280;
+
+    margin-top: 8px;
+}
+
+.movie-detail-poster {
+    display: block;
+
+    width: min(320px, 100%);
+
+    height: 450px;
+
+    object-fit: cover;
+
+    margin:
+        0 auto 35px;
+
+    border-radius: 16px;
+
+    box-shadow:
+        0 15px 35px
+        rgba(0, 0, 0, 0.15);
+}
+
+
+/* ==========================================
+   DETAILS GRID
+========================================== */
+
+.details-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 16px;
+}
+
+.detail-item {
+    padding: 18px;
+
+    border-radius: 12px;
+
+    background: #f8fafc;
+
+    border-left:
+        4px solid
+        #16a34a;
+}
+
+.detail-item strong {
+    display: block;
+
+    font-size: 0.85rem;
+
+    margin-bottom: 6px;
+}
+
+.detail-item span {
+    font-weight: 700;
+}
+
+
+/* ==========================================
+   DETAIL COLOURS
+========================================== */
+
+.detail-item.director {
+    border-left-color: #ec4899;
+}
+
+.detail-item.director strong,
+.detail-item.director span {
+    color: #ec4899;
+}
+
+.detail-item.hero,
+.detail-item.heroine {
+    border-left-color: #2563eb;
+}
+
+.detail-item.hero strong,
+.detail-item.hero span,
+.detail-item.heroine strong,
+.detail-item.heroine span {
+    color: #2563eb;
+}
+
+.detail-item.choreographer {
+    border-left-color: #9333ea;
+}
+
+.detail-item.choreographer strong,
+.detail-item.choreographer span {
+    color: #9333ea;
+}
+
+.detail-item.release-date {
+    border-left-color: #111827;
+}
+
+.detail-item.release-date strong,
+.detail-item.release-date span {
+    color: #111827;
+}
+
+.detail-item.collection {
+    border-left-color: #dc2626;
+}
+
+.detail-item.collection strong,
+.detail-item.collection span {
+    color: #dc2626;
+}
+
+.detail-item.producer {
+    border-left-color: #ea580c;
+}
+
+.detail-item.producer strong,
+.detail-item.producer span {
+    color: #ea580c;
+}
+
+.detail-item.music-director {
+    border-left-color: #0f766e;
+}
+
+.detail-item.music-director strong,
+.detail-item.music-director span {
+    color: #0f766e;
+}
+
+
+/* ==========================================
+   SONGS
+========================================== */
+
+.detail-section {
+    margin-top: 35px;
+}
+
+.detail-section h2 {
+    color: #166534;
+
+    margin-bottom: 15px;
+
+    border-bottom:
+        2px solid
+        #dcfce7;
+
+    padding-bottom: 10px;
+}
+
+.songs-list {
+    list-style: none;
+
+    display: grid;
+
+    gap: 10px;
+}
+
+.songs-list li {
+    background: #fdf2f8;
+
+    color: #be185d;
+
+    padding: 12px 16px;
+
+    border-radius: 8px;
+}
+
+
+/* ==========================================
+   FOOTER
+========================================== */
+
+footer {
+    text-align: center;
+
+    padding: 25px;
+
+    background: #166534;
+
+    color: #ffffff;
+
+    margin-top: 40px;
+}
+
+
+/* ==========================================
+   RESPONSIVE - TABLET
+========================================== */
+
+@media (max-width: 800px) {
+
+    .navbar {
+        flex-direction: column;
+
+        gap: 15px;
+
+        padding: 18px 5%;
+    }
+
+    .navbar nav {
+        gap: 18px;
+
+        flex-wrap: wrap;
+
+        justify-content: center;
+    }
+
+    .hero-section {
+        min-height: 600px;
+
+        padding: 60px 15px;
+    }
+
+    .movie-symbol {
+        font-size: 4rem;
+    }
+
+    .hero-section h1 {
+        font-size: 3.5rem;
+    }
+
+    .search-box {
+        flex-direction: column;
+
+        padding: 10px;
+    }
+
+    .search-button {
+        padding: 14px;
+    }
+
+    .continue-button {
+        width: min(300px, 100%);
+    }
+
+
+    /* Movie result */
+
+    .movie-card {
+        flex-direction: column;
+
+        align-items: center;
+
+        width: 95%;
+
+        padding: 25px;
+    }
+
+    .movie-poster-container {
+        width: 220px;
+
+        min-width: 220px;
+    }
+
+    .real-movie-poster {
+        width: 220px;
+
+        height: 320px;
+    }
+
+    .movie-poster-placeholder {
+        width: 220px;
+
+        min-width: 220px;
+
+        height: 320px;
+    }
+
+    .movie-information {
+        width: 100%;
+    }
+
+    .movie-information h2 {
+        text-align: center;
+
+        font-size: 28px;
+    }
+
+
+    /* Detail page */
+
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .movie-detail-card {
+        padding: 20px;
+    }
+
+    .movie-detail-header h1 {
+        font-size: 2rem;
+    }
+
+    .movie-detail-poster {
+        height: 400px;
+    }
+
+    .floating-symbol {
+        font-size: 2rem;
+    }
+}
+
+
+/* ==========================================
+   RESPONSIVE - MOBILE
+========================================== */
+
+@media (max-width: 480px) {
+
+    .logo {
+        font-size: 1.3rem;
+    }
+
+    .navbar nav {
+        gap: 12px;
+
+        font-size: 0.85rem;
+    }
+
+    .hero-section h1 {
+        font-size: 2.8rem;
+    }
+
+    .tagline {
+        font-size: 0.9rem;
+    }
+
+    .movie-symbol {
+        font-size: 3.5rem;
+    }
+
+    .movie-card {
+        width: 96%;
+
+        padding: 18px;
+
+        gap: 20px;
+    }
+
+    .real-movie-poster {
+        width: 200px;
+
+        height: 300px;
+    }
+
+    .movie-poster-placeholder {
+        width: 200px;
+
+        min-width: 200px;
+
+        height: 300px;
+    }
+
+    .movie-information p {
+        font-size: 16px;
+    }
+
+    .movie-information li {
+        font-size: 16px;
+    }
+
+    .movie-detail-poster {
+        height: 350px;
+    }
+}

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MovieBuzz - Home</title>
+
+    <!-- MovieBuzz CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- =========================
+         NAVIGATION BAR
+    ========================== -->
+    <header class="navbar">
+
+        <a href="index.html" class="logo">
+            🎬 MovieBuzz
+        </a>
+
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="movies.html">Movies</a>
+            <a href="people.html">People</a>
+            <a href="photos.html">Photos</a>
+        </nav>
+
+    </header>
+
+
+    <!-- =========================
+         MAIN HOME PAGE
+    ========================== -->
+    <main class="home-page">
+
+        <!-- Floating movie symbols -->
+        <div class="floating-symbol symbol-one">🎥</div>
+        <div class="floating-symbol symbol-two">🎬</div>
+        <div class="floating-symbol symbol-three">🍿</div>
+
+
+        <!-- =========================
+             HERO / SEARCH SECTION
+        ========================== -->
+        <section class="hero-section">
+
+            <!-- Main movie symbol -->
+            <div class="movie-symbol">
+                🎬
+            </div>
+
+
+            <!-- Website title -->
+            <h1>
+                Movie<span>Buzz</span>
+            </h1>
+
+
+            <!-- Tagline -->
+            <p class="tagline">
+                Discover Movies, Stars &amp; Stories
+            </p>
+
+
+            <!-- =========================
+                 SEARCH FORM
+            ========================== -->
+            <form id="searchForm" class="search-box">
+
+                <input
+                    type="text"
+                    id="movieSearch"
+                    placeholder="Search for a movie..."
+                    autocomplete="off"
+                    required
+                >
+
+                <button
+                    type="submit"
+                    class="search-button"
+                >
+                    🔍 Search
+                </button>
+
+            </form>
+
+
+            <!-- =========================
+                 CONTINUE BUTTON
+            ========================== -->
+            <button
+                type="button"
+                id="continueButton"
+                class="continue-button"
+            >
+                Continue
+            </button>
+
+
+            <!-- Message area -->
+            <p
+                id="searchMessage"
+                class="search-message"
+            ></p>
+
+
+            <!-- =========================
+                 MOVIE RESULT
+                 IMPORTANT:
+                 This ID appears ONLY ONCE
+            ========================== -->
+            <section
+                id="homeMovieResult"
+                class="home-result hidden"
+            ></section>
+
+        </section>
+
+    </main>
+
+
+    <!-- =========================
+         FOOTER
+    ========================== -->
+    <footer>
+        <p>
+            © 2026 MovieBuzz. All rights reserved.
+        </p>
+    </footer>
+
+
+    <!-- MovieBuzz JavaScript -->
+    <script src="script.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "moviebuzz",
+  "version": "1.0.0",
+  "description": "MovieBuzz Indian Movies Website",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@google/genai": "latest",
+    "cors": "latest",
+    "dotenv": "latest",
+    "express": "latest"
+  }
+}
