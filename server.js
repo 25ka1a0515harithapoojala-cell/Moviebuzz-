@@ -1,830 +1,1303 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const { GoogleGenAI } = require("@google/genai");
 
 dotenv.config();
 
 const app = express();
-
 const PORT = process.env.PORT || 3000;
 const HOST = "0.0.0.0";
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(express.static(__dirname));
 
+const cache = new Map();
+
+const USER_AGENT =
+    "MovieBuzz/2.0 (educational movie website; https://moviebuzz-huxb.onrender.com/)";
+
 /* =========================================================
-   GEMINI
+   GENERAL HELPERS
 ========================================================= */
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-let ai = null;
-
-if (GEMINI_API_KEY) {
-    ai = new GoogleGenAI({
-        apiKey: GEMINI_API_KEY
+async function fetchJSON(url, timeout = 15000) {
+    const response = await fetch(url, {
+        signal: AbortSignal.timeout(timeout),
+        headers: {
+            "User-Agent": USER_AGENT,
+            "Accept": "application/json"
+        }
     });
+
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+
+    return response.json();
 }
 
-const GEMINI_MODEL = "gemini-3.6-flash";
-
-/* =========================================================
-   MEMORY CACHE
-   No database is used.
-========================================================= */
-
-const movieCache = new Map();
-
-/* =========================================================
-   BUILT-IN MOVIES
-   These work even when Gemini is unavailable.
-========================================================= */
-
-const builtInMovies = {
-
-    rrr: {
-        title: "RRR",
-        originalTitle: "RRR",
-        language: "Telugu",
-        releaseDate: "25 March 2022",
-        year: 2022,
-        runtime: "182 minutes",
-        certificate: "UA",
-
-        genres: [
-            "Action",
-            "Drama",
-            "Historical Fiction"
-        ],
-
-        director: "S. S. Rajamouli",
-        producer: "D. V. V. Danayya",
-
-        hero: "N. T. Rama Rao Jr.",
-        heroine: "Alia Bhatt",
-
-        cast: [
-            "N. T. Rama Rao Jr.",
-            "Ram Charan",
-            "Alia Bhatt",
-            "Ajay Devgn",
-            "Shriya Saran",
-            "Samuthirakani"
-        ],
-
-        choreographer: "Prem Rakshith",
-        musicDirector: "M. M. Keeravaani",
-        cinematography: "K. K. Senthil Kumar",
-        editor: "A. Sreekar Prasad",
-
-        productionCompany: "DVV Entertainment",
-
-        budget: "Approximately ₹550 crore",
-
-        collection: "Over ₹1,200 crore worldwide",
-
-        songs: [
-            "Dosti",
-            "Naatu Naatu",
-            "Janani",
-            "Komuram Bheemudo",
-            "Raamam Raaghavam",
-            "Sholay"
-        ],
-
-        story:
-            "RRR follows two fictional revolutionaries, Alluri Sitarama Raju and Komaram Bheem, who form a powerful friendship and fight against British colonial rule.",
-
-        description:
-            "RRR is a Telugu-language epic action drama directed by S. S. Rajamouli.",
-
-        posterUrl:
-            "https://upload.wikimedia.org/wikipedia/en/d/d7/RRR_Poster.jpg",
-
-        posterSource:
-            "https://en.wikipedia.org/wiki/RRR",
-
-        posterTitle: "RRR",
-
-        posterProvider: "Wikimedia"
-    },
-
-    baahubali: {
-        title: "Baahubali: The Beginning",
-        originalTitle: "Baahubali: The Beginning",
-        language: "Telugu",
-        releaseDate: "10 July 2015",
-        year: 2015,
-        runtime: "159 minutes",
-        certificate: "UA",
-
-        genres: [
-            "Action",
-            "Drama",
-            "Epic"
-        ],
-
-        director: "S. S. Rajamouli",
-        producer:
-            "Shobu Yarlagadda and Prasad Devineni",
-
-        hero: "Prabhas",
-        heroine: "Anushka Shetty",
-
-        cast: [
-            "Prabhas",
-            "Rana Daggubati",
-            "Anushka Shetty",
-            "Tamannaah Bhatia",
-            "Ramya Krishnan",
-            "Sathyaraj"
-        ],
-
-        choreographer: "Prem Rakshith",
-        musicDirector: "M. M. Keeravaani",
-        cinematography: "K. K. Senthil Kumar",
-        editor: "Kotagiri Venkateswara Rao",
-
-        productionCompany: "Arka Media Works",
-
-        budget: "Approximately ₹180 crore",
-
-        collection: "Over ₹600 crore worldwide",
-
-        songs: [
-            "Saahore Baahubali",
-            "Mamatala Talli",
-            "Nippulaa Swasa Ga",
-            "Manohari",
-            "Dheevara"
-        ],
-
-        story:
-            "The film follows Shivudu, who discovers his royal heritage and becomes connected to the legendary kingdom of Mahishmati.",
-
-        description:
-            "Baahubali: The Beginning is an epic Indian action film directed by S. S. Rajamouli.",
-
-        posterUrl:
-            "https://upload.wikimedia.org/wikipedia/en/5/5f/Baahubali_The_Beginning_poster.jpg",
-
-        posterSource:
-            "https://en.wikipedia.org/wiki/Baahubali:_The_Beginning",
-
-        posterTitle:
-            "Baahubali: The Beginning",
-
-        posterProvider:
-            "Wikimedia"
-    },
-
-    bahubali: {
-        title: "Baahubali: The Beginning",
-        originalTitle: "Baahubali: The Beginning",
-        language: "Telugu",
-        releaseDate: "10 July 2015",
-        year: 2015,
-        runtime: "159 minutes",
-        certificate: "UA",
-
-        genres: [
-            "Action",
-            "Drama",
-            "Epic"
-        ],
-
-        director: "S. S. Rajamouli",
-        producer:
-            "Shobu Yarlagadda and Prasad Devineni",
-
-        hero: "Prabhas",
-        heroine: "Anushka Shetty",
-
-        cast: [
-            "Prabhas",
-            "Rana Daggubati",
-            "Anushka Shetty",
-            "Tamannaah Bhatia",
-            "Ramya Krishnan",
-            "Sathyaraj"
-        ],
-
-        choreographer: "Prem Rakshith",
-        musicDirector: "M. M. Keeravaani",
-        cinematography: "K. K. Senthil Kumar",
-        editor: "Kotagiri Venkateswara Rao",
-
-        productionCompany: "Arka Media Works",
-
-        budget: "Approximately ₹180 crore",
-
-        collection: "Over ₹600 crore worldwide",
-
-        songs: [
-            "Saahore Baahubali",
-            "Mamatala Talli",
-            "Nippulaa Swasa Ga",
-            "Manohari",
-            "Dheevara"
-        ],
-
-        story:
-            "The film follows Shivudu, who discovers his royal heritage and becomes connected to the legendary kingdom of Mahishmati.",
-
-        description:
-            "Baahubali: The Beginning is an epic Indian action film directed by S. S. Rajamouli.",
-
-        posterUrl:
-            "https://upload.wikimedia.org/wikipedia/en/5/5f/Baahubali_The_Beginning_poster.jpg",
-
-        posterSource:
-            "https://en.wikipedia.org/wiki/Baahubali:_The_Beginning",
-
-        posterTitle:
-            "Baahubali: The Beginning",
-
-        posterProvider:
-            "Wikimedia"
-    }
-};
-
-/* =========================================================
-   GEMINI MOVIE INFORMATION
-========================================================= */
-
-async function getMovieFromGemini(movieName) {
-
-    if (!ai) {
-        throw new Error(
-            "GEMINI_API_KEY is not configured."
-        );
-    }
-
-    const prompt = `
-You are the movie information engine for MovieBuzz.
-
-Give factual information about this Indian movie:
-
-"${movieName}"
-
-Return ONLY valid JSON.
-
-Use exactly this structure:
-
-{
-  "title": "",
-  "originalTitle": "",
-  "language": "",
-  "releaseDate": "",
-  "year": "",
-  "runtime": "",
-  "certificate": "",
-  "genres": [],
-  "director": "",
-  "producer": "",
-  "hero": "",
-  "heroine": "",
-  "cast": [],
-  "choreographer": "",
-  "musicDirector": "",
-  "cinematography": "",
-  "editor": "",
-  "productionCompany": "",
-  "budget": "",
-  "collection": "",
-  "songs": [],
-  "story": "",
-  "description": ""
+function clean(value) {
+    return String(value ?? "").trim();
 }
 
-Rules:
+function unique(values) {
+    return [
+        ...new Set(
+            values
+                .map(clean)
+                .filter(Boolean)
+        )
+    ];
+}
 
-- Give information about the requested movie.
-- Do not invent information.
-- If information is unavailable, use "Not available".
-- songs must be an array.
-- Return JSON only.
-`;
+function people(value) {
+    if (!value) return [];
 
-    const response =
-        await ai.models.generateContent({
-            model: GEMINI_MODEL,
-            contents: prompt
-        });
+    return clean(value)
+        .split(/,\s*|\n+/)
+        .map(stripWiki)
+        .filter(Boolean);
+}
 
-    if (!response.text) {
-        throw new Error(
-            "Gemini returned an empty response."
-        );
-    }
-
-    let text = response.text.trim();
-
-    if (text.startsWith("```json")) {
-        text = text
-            .replace(/^```json/, "")
-            .replace(/```$/, "")
-            .trim();
-    }
-
-    if (text.startsWith("```")) {
-        text = text
-            .replace(/^```/, "")
-            .replace(/```$/, "")
-            .trim();
-    }
-
-    return JSON.parse(text);
+function stripWiki(text) {
+    return clean(text
+        .replace(/<ref[^>]*>[\s\S]*?<\/ref>/gi, "")
+        .replace(/<ref[^>]*\/>/gi, "")
+        .replace(/\[\[([^|\]]+)\|([^\]]+)\]\]/g, "$2")
+        .replace(/\[\[([^\]]+)\]\]/g, "$1")
+        .replace(/'''/g, "")
+        .replace(/''/g, "")
+        .replace(/<br\s*\/?>/gi, ", ")
+        .replace(/<!--[\s\S]*?-->/g, "")
+    );
 }
 
 /* =========================================================
-   POSTER SEARCH
+   IMDbOT / FREE MOVIE DATABASE
+   No API key required.
 ========================================================= */
 
-async function getPoster(movieTitle) {
+function normalizeIMDbItem(item) {
+    if (!item || typeof item !== "object") {
+        return null;
+    }
 
-    try {
-
-        const url =
-            "https://en.wikipedia.org/w/api.php" +
-            "?action=query" +
-            "&generator=search" +
-            "&gsrsearch=" +
-            encodeURIComponent(movieTitle + " film") +
-            "&gsrnamespace=0" +
-            "&gsrlimit=5" +
-            "&prop=pageimages|info" +
-            "&piprop=original" +
-            "&format=json" +
-            "&origin=*";
-
-        const response =
-            await fetch(url, {
-                headers: {
-                    "User-Agent":
-                        "MovieBuzz/1.0 (educational movie website)"
-                }
-            });
-
-        if (!response.ok) {
-            console.log(
-                "Poster service returned:",
-                response.status
-            );
-
-            return null;
-        }
-
-        const data =
-            await response.json();
-
-        if (
-            !data.query ||
-            !data.query.pages
-        ) {
-            return null;
-        }
-
-        const pages =
-            Object.values(
-                data.query.pages
-            );
-
-        for (const page of pages) {
-
+    const get = (...keys) => {
+        for (const key of keys) {
             if (
-                page.original &&
-                page.original.source
+                item[key] !== undefined &&
+                item[key] !== null
             ) {
-
-                return {
-                    posterUrl:
-                        page.original.source,
-
-                    posterSource:
-                        "https://en.wikipedia.org/wiki/" +
-                        encodeURIComponent(
-                            page.title
-                        ),
-
-                    posterTitle:
-                        page.title,
-
-                    posterProvider:
-                        "Wikimedia"
-                };
+                return item[key];
             }
         }
 
-        return null;
+        return "";
+    };
 
-    } catch (error) {
+    return {
+        title: clean(
+            get("#TITLE", "title", "Title")
+        ),
 
-        console.log(
-            "Poster search error:",
-            error.message
+        year: clean(
+            get("#YEAR", "year", "Year")
+        ),
+
+        imdbId: clean(
+            get("#IMDB_ID", "imdb_id", "imdbId")
+        ),
+
+        imdbUrl: clean(
+            get("#IMDB_URL", "imdb_url", "imdbUrl")
+        ),
+
+        posterUrl: clean(
+            get("#IMG_POSTER", "poster", "Poster")
+        ),
+
+        actors: clean(
+            get("#ACTORS", "actors", "Actors")
+        ),
+
+        plot: clean(
+            get("#PLOT", "plot", "Plot")
+        ),
+
+        aka: clean(
+            get("#AKA", "aka", "AKA")
+        ),
+
+        rank:
+            Number(
+                get("#RANK", "rank", "Rank")
+            ) || 999999
+    };
+}
+
+function imdbResults(data) {
+    let raw = [];
+
+    if (Array.isArray(data)) {
+        raw = data;
+    }
+
+    else if (Array.isArray(data?.description)) {
+        raw = data.description;
+    }
+
+    else if (Array.isArray(data?.results)) {
+        raw = data.results;
+    }
+
+    else if (Array.isArray(data?.items)) {
+        raw = data.items;
+    }
+
+    else if (
+        data?.["#TITLE"] ||
+        data?.title ||
+        data?.Title
+    ) {
+        raw = [data];
+    }
+
+    return raw
+        .map(normalizeIMDbItem)
+        .filter(Boolean)
+        .filter(
+            item =>
+                item.title ||
+                item.imdbId
         );
+}
 
+function scoreIMDb(item, query) {
+    const q = clean(query).toLowerCase();
+
+    const title =
+        item.title.toLowerCase();
+
+    const aka =
+        item.aka.toLowerCase();
+
+    let score = 0;
+
+    if (title === q) {
+        score += 1000;
+    }
+
+    if (title.startsWith(q)) {
+        score += 300;
+    }
+
+    if (title.includes(q)) {
+        score += 150;
+    }
+
+    if (aka.includes(q)) {
+        score += 75;
+    }
+
+    if (item.posterUrl) {
+        score += 20;
+    }
+
+    return score -
+        item.rank / 100000;
+}
+
+async function searchIMDb(query) {
+    const url =
+        "https://imdb.iamidiotareyoutoo.com/search?q=" +
+        encodeURIComponent(query);
+
+    const data =
+        await fetchJSON(url);
+
+    const results =
+        imdbResults(data);
+
+    if (!results.length) {
         return null;
     }
+
+    results.sort(
+        (a, b) =>
+            scoreIMDb(b, query) -
+            scoreIMDb(a, query)
+    );
+
+    return results[0];
 }
 
 /* =========================================================
-   NORMALIZE MOVIE
+   WIKIPEDIA / WIKIMEDIA
 ========================================================= */
 
-function normalizeMovie(movie) {
+async function searchWikipedia(title) {
+    const url =
+        "https://en.wikipedia.org/w/api.php" +
+        "?action=query" +
+        "&generator=search" +
+        "&gsrsearch=" +
+        encodeURIComponent(`${title} film`) +
+        "&gsrnamespace=0" +
+        "&gsrlimit=5" +
+        "&prop=pageimages|info|pageprops|extracts|revisions" +
+        "&piprop=original" +
+        "&ppprop=wikibase_item" +
+        "&exintro=1" +
+        "&explaintext=1" +
+        "&inprop=url" +
+        "&rvprop=content" +
+        "&rvslots=main" +
+        "&format=json" +
+        "&formatversion=2" +
+        "&origin=*";
+
+    const data =
+        await fetchJSON(url);
+
+    const pages =
+        data?.query?.pages || [];
+
+    if (!pages.length) {
+        return null;
+    }
+
+    const q =
+        clean(title).toLowerCase();
+
+    pages.sort((a, b) => {
+        const at =
+            clean(a.title).toLowerCase();
+
+        const bt =
+            clean(b.title).toLowerCase();
+
+        const as =
+            at === q
+                ? 100
+                : at.startsWith(q)
+                    ? 50
+                    : at.includes(q)
+                        ? 20
+                        : 0;
+
+        const bs =
+            bt === q
+                ? 100
+                : bt.startsWith(q)
+                    ? 50
+                    : bt.includes(q)
+                        ? 20
+                        : 0;
+
+        return bs - as;
+    });
+
+    const page = pages[0];
 
     return {
-
         title:
-            movie.title ||
-            "Unknown",
+            page.title ||
+            title,
 
-        originalTitle:
-            movie.originalTitle ||
-            movie.title ||
-            "Unknown",
+        url:
+            page.fullurl ||
+            `https://en.wikipedia.org/wiki/${encodeURIComponent(
+                String(
+                    page.title ||
+                    title
+                ).replace(/ /g, "_")
+            )}`,
 
-        language:
-            movie.language ||
-            "Not available",
+        qid:
+            page.pageprops?.wikibase_item ||
+            "",
 
-        releaseDate:
-            movie.releaseDate ||
-            "Not available",
-
-        year:
-            movie.year ||
-            "Not available",
-
-        runtime:
-            movie.runtime ||
-            "Not available",
-
-        certificate:
-            movie.certificate ||
-            "Not available",
-
-        genres:
-            Array.isArray(movie.genres)
-                ? movie.genres
-                : [],
-
-        director:
-            movie.director ||
-            "Not available",
-
-        producer:
-            movie.producer ||
-            "Not available",
-
-        hero:
-            movie.hero ||
-            "Not available",
-
-        heroine:
-            movie.heroine ||
-            "Not available",
-
-        cast:
-            Array.isArray(movie.cast)
-                ? movie.cast
-                : [],
-
-        choreographer:
-            movie.choreographer ||
-            "Not available",
-
-        musicDirector:
-            movie.musicDirector ||
-            "Not available",
-
-        cinematography:
-            movie.cinematography ||
-            "Not available",
-
-        editor:
-            movie.editor ||
-            "Not available",
-
-        productionCompany:
-            movie.productionCompany ||
-            "Not available",
-
-        budget:
-            movie.budget ||
-            "Not available",
-
-        collection:
-            movie.collection ||
-            "Not available",
-
-        songs:
-            Array.isArray(movie.songs)
-                ? movie.songs
-                : [],
-
-        story:
-            movie.story ||
-            "Not available",
-
-        description:
-            movie.description ||
-            "Not available",
+        extract:
+            clean(page.extract),
 
         posterUrl:
-            movie.posterUrl ||
-            "",
+            clean(page.original?.source),
 
-        posterSource:
-            movie.posterSource ||
-            "",
-
-        posterTitle:
-            movie.posterTitle ||
-            movie.title ||
-            "",
-
-        posterProvider:
-            movie.posterProvider ||
+        wikitext:
+            page.revisions?.[0]
+                ?.slots?.main?.content ||
             ""
     };
 }
 
 /* =========================================================
-   TEST API
+   WIKIPEDIA INFOBOX
 ========================================================= */
 
-app.get("/api/test", (req, res) => {
+function infoboxField(wikitext, names) {
+    if (!wikitext) {
+        return "";
+    }
 
-    res.json({
-        success: true,
-        message:
-            "MovieBuzz server is working.",
-        geminiConfigured:
-            Boolean(GEMINI_API_KEY),
-        model:
-            GEMINI_MODEL
-    });
+    const regex = new RegExp(
+        `\\|\\s*(?:${names.join("|")})\\s*=\\s*([\\s\\S]*?)(?=\\n\\s*\\|\\s*[^|=]+\\s*=|\\n\\s*\\}\\}\\s*$)`,
+        "i"
+    );
 
-});
+    const match =
+        wikitext.match(regex);
+
+    return match
+        ? stripWiki(match[1])
+        : "";
+}
 
 /* =========================================================
-   HEALTH
+   WIKIDATA
 ========================================================= */
 
-app.get("/health", (req, res) => {
+async function getWikidata(qid) {
+    if (!qid) {
+        return null;
+    }
 
-    res.json({
-        success: true,
-        status:
-            "MovieBuzz server is healthy"
-    });
+    const url =
+        "https://www.wikidata.org/w/api.php" +
+        "?action=wbgetentities" +
+        "&ids=" +
+        encodeURIComponent(qid) +
+        "&props=claims" +
+        "&format=json";
 
-});
+    const data =
+        await fetchJSON(url);
 
-/* =========================================================
-   MOVIE API
-========================================================= */
+    return data?.entities?.[qid] || null;
+}
 
-app.post("/api/movie", async (req, res) => {
+function claimIds(entity, property) {
+    return (
+        entity?.claims?.[property] || []
+    )
+        .map(claim => {
+            const value =
+                claim?.mainsnak
+                    ?.datavalue
+                    ?.value;
+
+            if (
+                value &&
+                typeof value === "object" &&
+                value["entity-type"] === "item" &&
+                value["numeric-id"]
+            ) {
+                return `Q${value["numeric-id"]}`;
+            }
+
+            return null;
+        })
+        .filter(Boolean);
+}
+
+function claimDate(entity, property) {
+    const value =
+        entity?.claims?.[property]?.[0]
+            ?.mainsnak
+            ?.datavalue
+            ?.value;
+
+    if (!value?.time) {
+        return "";
+    }
+
+    return value.time
+        .replace(/^\+/, "")
+        .slice(0, 10);
+}
+
+function claimQuantity(entity, property) {
+    const value =
+        entity?.claims?.[property]?.[0]
+            ?.mainsnak
+            ?.datavalue
+            ?.value;
+
+    return value?.amount
+        ? String(value.amount)
+            .replace("+", "")
+        : "";
+}
+
+async function labelsFor(ids) {
+    const list =
+        unique(ids).slice(0, 50);
+
+    if (!list.length) {
+        return {};
+    }
+
+    const url =
+        "https://www.wikidata.org/w/api.php" +
+        "?action=wbgetentities" +
+        "&ids=" +
+        encodeURIComponent(
+            list.join("|")
+        ) +
+        "&props=labels" +
+        "&languages=en" +
+        "&languagefallback=1" +
+        "&format=json";
+
+    const data =
+        await fetchJSON(url);
+
+    const result = {};
+
+    for (
+        const [id, entity]
+        of Object.entries(
+            data?.entities || {}
+        )
+    ) {
+        result[id] =
+            entity?.labels?.en?.value ||
+            id;
+    }
+
+    return result;
+}
+
+async function enrichWikidata(movie, qid) {
+    if (!qid) {
+        return movie;
+    }
 
     try {
+        const entity =
+            await getWikidata(qid);
+
+        if (!entity) {
+            return movie;
+        }
+
+        const props = [
+            "P57",
+            "P161",
+            "P1809",
+            "P162",
+            "P86",
+            "P344",
+            "P1040",
+            "P272",
+            "P136",
+            "P364"
+        ];
+
+        const ids =
+            props.flatMap(
+                property =>
+                    claimIds(
+                        entity,
+                        property
+                    )
+            );
+
+        const labels =
+            await labelsFor(ids);
+
+        const names = property =>
+            claimIds(
+                entity,
+                property
+            ).map(
+                id =>
+                    labels[id] ||
+                    id
+            );
+
+        const director =
+            names("P57");
+
+        const cast =
+            names("P161");
+
+        const choreographer =
+            names("P1809");
+
+        const producer =
+            names("P162");
+
+        const composer =
+            names("P86");
+
+        const cinematographer =
+            names("P344");
+
+        const editor =
+            names("P1040");
+
+        const company =
+            names("P272");
+
+        const genres =
+            names("P136");
+
+        const language =
+            names("P364");
+
+        if (director.length) {
+            movie.director =
+                director.join(", ");
+        }
+
+        if (cast.length) {
+            movie.cast = cast;
+        }
+
+        if (choreographer.length) {
+            movie.choreographer =
+                choreographer.join(", ");
+        }
+
+        if (producer.length) {
+            movie.producer =
+                producer.join(", ");
+        }
+
+        if (composer.length) {
+            movie.musicDirector =
+                composer.join(", ");
+        }
+
+        if (cinematographer.length) {
+            movie.cinematography =
+                cinematographer.join(", ");
+        }
+
+        if (editor.length) {
+            movie.editor =
+                editor.join(", ");
+        }
+
+        if (company.length) {
+            movie.productionCompany =
+                company.join(", ");
+        }
+
+        if (genres.length) {
+            movie.genres = genres;
+            movie.genre =
+                genres.join(", ");
+        }
+
+        if (language.length) {
+            movie.language =
+                language.join(", ");
+        }
+
+        const release =
+            claimDate(
+                entity,
+                "P577"
+            );
+
+        if (release) {
+            movie.year =
+                release.slice(0, 4);
+
+            movie.releaseDate =
+                formatDate(release);
+        }
+
+        const budget =
+            claimQuantity(
+                entity,
+                "P2130"
+            );
+
+        if (budget) {
+            movie.budget =
+                formatNumber(budget);
+        }
+
+        const gross =
+            claimQuantity(
+                entity,
+                "P2142"
+            );
+
+        if (gross) {
+            movie.collection =
+                formatNumber(gross);
+        }
+
+        return movie;
+
+    } catch (error) {
+        console.warn(
+            "Wikidata skipped:",
+            error.message
+        );
+
+        return movie;
+    }
+}
+
+/* =========================================================
+   FORMATTING
+========================================================= */
+
+function formatDate(value) {
+    const d =
+        new Date(
+            value +
+            "T00:00:00Z"
+        );
+
+    if (
+        Number.isNaN(
+            d.getTime()
+        )
+    ) {
+        return value;
+    }
+
+    return d.toLocaleDateString(
+        "en-GB",
+        {
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+            timeZone: "UTC"
+        }
+    );
+}
+
+function formatNumber(value) {
+    const n =
+        Number(
+            String(value)
+                .replace(
+                    /[^\d.-]/g,
+                    ""
+                )
+        );
+
+    return Number.isFinite(n)
+        ? new Intl.NumberFormat(
+            "en-IN",
+            {
+                maximumFractionDigits: 0
+            }
+        ).format(n)
+        : clean(value);
+}
+
+/* =========================================================
+   FINAL MOVIE FORMAT
+========================================================= */
+
+function normalizeMovie(
+    movie,
+    requested
+) {
+    return {
+        title:
+            clean(movie.title) ||
+            requested,
+
+        originalTitle:
+            clean(
+                movie.originalTitle
+            ) ||
+            clean(movie.title) ||
+            requested,
+
+        language:
+            clean(movie.language) ||
+            "Not available",
+
+        releaseDate:
+            clean(
+                movie.releaseDate
+            ) ||
+            (
+                movie.year
+                    ? String(movie.year)
+                    : "Not available"
+            ),
+
+        year:
+            clean(movie.year) ||
+            "Not available",
+
+        runtime:
+            clean(movie.runtime) ||
+            "Not available",
+
+        certificate:
+            clean(movie.certificate) ||
+            "Not available",
+
+        genres:
+            Array.isArray(movie.genres)
+                ? unique(movie.genres)
+                : [],
+
+        genre:
+            clean(movie.genre) ||
+            (
+                Array.isArray(
+                    movie.genres
+                )
+                    ? movie.genres.join(", ")
+                    : "Not available"
+            ),
+
+        director:
+            clean(movie.director) ||
+            "Not available",
+
+        producer:
+            clean(movie.producer) ||
+            "Not available",
+
+        hero:
+            clean(movie.hero) ||
+            "Not available",
+
+        heroine:
+            clean(movie.heroine) ||
+            "Not available",
+
+        cast:
+            Array.isArray(movie.cast)
+                ? unique(movie.cast)
+                : [],
+
+        choreographer:
+            clean(
+                movie.choreographer
+            ) ||
+            "Not available",
+
+        musicDirector:
+            clean(
+                movie.musicDirector
+            ) ||
+            "Not available",
+
+        cinematography:
+            clean(
+                movie.cinematography
+            ) ||
+            "Not available",
+
+        editor:
+            clean(movie.editor) ||
+            "Not available",
+
+        productionCompany:
+            clean(
+                movie.productionCompany
+            ) ||
+            "Not available",
+
+        budget:
+            clean(movie.budget) ||
+            "Not available",
+
+        collection:
+            clean(movie.collection) ||
+            "Not available",
+
+        songs:
+            Array.isArray(movie.songs)
+                ? unique(movie.songs)
+                : [],
+
+        story:
+            clean(movie.story) ||
+            clean(movie.plot) ||
+            "Not available",
+
+        description:
+            clean(
+                movie.description
+            ) ||
+            clean(movie.plot) ||
+            "Movie information retrieved from public movie sources.",
+
+        imdbId:
+            clean(movie.imdbId),
+
+        imdbUrl:
+            clean(movie.imdbUrl),
+
+        posterUrl:
+            clean(movie.posterUrl),
+
+        posterSource:
+            clean(movie.posterSource),
+
+        posterTitle:
+            clean(
+                movie.posterTitle
+            ) ||
+            clean(movie.title) ||
+            requested,
+
+        posterProvider:
+            clean(
+                movie.posterProvider
+            )
+    };
+}
+
+/* =========================================================
+   MAIN MOVIE SEARCH
+   GEMINI IS NOT USED.
+========================================================= */
+
+app.post(
+    "/api/movie",
+    async (req, res) => {
 
         const movieName =
-            String(
+            clean(
                 req.body?.movie ||
                 req.body?.movieName ||
-                req.body?.title ||
-                ""
-            ).trim();
-
-        console.log("");
-        console.log(
-            "=========================================="
-        );
-        console.log(
-            "MOVIE SEARCH:",
-            movieName
-        );
-        console.log(
-            "=========================================="
-        );
+                req.body?.title
+            );
 
         if (!movieName) {
-
             return res.status(400).json({
                 error:
                     "Please enter a movie name."
             });
         }
 
-        const cacheKey =
+        const key =
             movieName.toLowerCase();
 
-        /* -------------------------------------------------
-           FIRST: BUILT-IN MOVIES
-           This happens BEFORE Gemini.
-        ------------------------------------------------- */
+        /* CACHE */
 
-        if (builtInMovies[cacheKey]) {
-
+        if (cache.has(key)) {
             console.log(
-                "Using built-in movie data."
-            );
-
-            const movie =
-                normalizeMovie(
-                    builtInMovies[cacheKey]
-                );
-
-            movieCache.set(
-                cacheKey,
-                movie
-            );
-
-            return res.json(movie);
-        }
-
-        /* -------------------------------------------------
-           SECOND: MEMORY CACHE
-        ------------------------------------------------- */
-
-        if (movieCache.has(cacheKey)) {
-
-            console.log(
-                "Using cached movie data."
+                `CACHE HIT: ${movieName}`
             );
 
             return res.json(
-                movieCache.get(cacheKey)
+                cache.get(key)
             );
         }
 
-        /* -------------------------------------------------
-           THIRD: GEMINI
-        ------------------------------------------------- */
+        console.log(
+            `MOVIE SEARCH: ${movieName}`
+        );
 
-        if (!ai) {
+        let imdb = null;
+        let wiki = null;
 
-            return res.status(500).json({
-                error:
-                    "Gemini API key is not configured."
-            });
-        }
-
-        let movieData;
+        /* =================================================
+           SOURCE 1: IMDbOT
+        ================================================= */
 
         try {
-
-            console.log(
-                "Searching Gemini..."
-            );
-
-            movieData =
-                await getMovieFromGemini(
+            imdb =
+                await searchIMDb(
                     movieName
                 );
 
-            movieData =
-                normalizeMovie(
-                    movieData
+            if (imdb) {
+                console.log(
+                    `IMDbOT: ${imdb.title}`
                 );
-
-            console.log(
-                "Gemini movie information received."
-            );
+            }
 
         } catch (error) {
-
-            console.error(
-                "Gemini error:",
+            console.warn(
+                "IMDbOT failed:",
                 error.message
             );
-
-            const errorText =
-                String(error.message)
-                    .toLowerCase();
-
-            if (
-                errorText.includes("429") ||
-                errorText.includes("quota") ||
-                errorText.includes(
-                    "resource exhausted"
-                )
-            ) {
-
-                return res.status(429).json({
-                    error:
-                        "Gemini API quota has been reached. Please try again later."
-                });
-            }
-
-            if (
-                errorText.includes("503") ||
-                errorText.includes(
-                    "unavailable"
-                )
-            ) {
-
-                return res.status(503).json({
-                    error:
-                        "Gemini is temporarily busy. Please try again later."
-                });
-            }
-
-            return res.status(500).json({
-                error:
-                    "Unable to get movie information."
-            });
         }
 
-        /* -------------------------------------------------
-           POSTER
-        ------------------------------------------------- */
+        /* =================================================
+           SOURCE 2: WIKIPEDIA
+        ================================================= */
 
-        if (!movieData.posterUrl) {
+        const title =
+            imdb?.title ||
+            movieName;
 
-            console.log(
-                "Searching for movie poster..."
+        try {
+            wiki =
+                await searchWikipedia(
+                    title
+                );
+
+            if (wiki) {
+                console.log(
+                    `Wikipedia: ${wiki.title}`
+                );
+            }
+
+        } catch (error) {
+            console.warn(
+                "Wikipedia failed:",
+                error.message
+            );
+        }
+
+        /* =================================================
+           CREATE MOVIE OBJECT
+        ================================================= */
+
+        let movie = {
+
+            title:
+                imdb?.title ||
+                wiki?.title ||
+                movieName,
+
+            originalTitle:
+                imdb?.title ||
+                movieName,
+
+            year:
+                imdb?.year ||
+                "",
+
+            cast:
+                people(
+                    imdb?.actors
+                ),
+
+            plot:
+                imdb?.plot ||
+                "",
+
+            description:
+                wiki?.extract ||
+                imdb?.plot ||
+                "",
+
+            imdbId:
+                imdb?.imdbId ||
+                "",
+
+            imdbUrl:
+                imdb?.imdbUrl ||
+                "",
+
+            /* REAL POSTER */
+
+            posterUrl:
+                imdb?.posterUrl ||
+                wiki?.posterUrl ||
+                "",
+
+            posterSource:
+                imdb?.posterUrl
+                    ? (
+                        imdb.imdbUrl ||
+                        "https://www.imdb.com/"
+                    )
+                    : (
+                        wiki?.url ||
+                        ""
+                    ),
+
+            posterTitle:
+                imdb?.title ||
+                wiki?.title ||
+                movieName,
+
+            posterProvider:
+                imdb?.posterUrl
+                    ? "IMDbOT"
+                    : wiki?.posterUrl
+                        ? "Wikimedia"
+                        : ""
+        };
+
+        /* =================================================
+           SOURCE 3: WIKIDATA
+        ================================================= */
+
+        if (wiki?.qid) {
+
+            movie =
+                await enrichWikidata(
+                    movie,
+                    wiki.qid
+                );
+        }
+
+        /* =================================================
+           SOURCE 4: WIKIPEDIA INFOBOX
+        ================================================= */
+
+        const text =
+            wiki?.wikitext ||
+            "";
+
+        const director =
+            infoboxField(
+                text,
+                ["director"]
             );
 
-            const poster =
-                await getPoster(
-                    movieData.title
-                );
+        const producer =
+            infoboxField(
+                text,
+                [
+                    "producer",
+                    "producers"
+                ]
+            );
 
-            if (poster) {
+        const starring =
+            infoboxField(
+                text,
+                ["starring"]
+            );
 
-                movieData.posterUrl =
-                    poster.posterUrl;
+        const music =
+            infoboxField(
+                text,
+                [
+                    "music",
+                    "music by",
+                    "music_director"
+                ]
+            );
 
-                movieData.posterSource =
-                    poster.posterSource;
+        const cinematography =
+            infoboxField(
+                text,
+                ["cinematography"]
+            );
 
-                movieData.posterTitle =
-                    poster.posterTitle;
+        const editing =
+            infoboxField(
+                text,
+                [
+                    "editing",
+                    "edited by"
+                ]
+            );
 
-                movieData.posterProvider =
-                    poster.posterProvider;
+        const production =
+            infoboxField(
+                text,
+                [
+                    "production companies",
+                    "production_company"
+                ]
+            );
 
-                console.log(
-                    "Poster found."
-                );
+        const released =
+            infoboxField(
+                text,
+                [
+                    "released",
+                    "release_date"
+                ]
+            );
 
-            } else {
+        const budget =
+            infoboxField(
+                text,
+                ["budget"]
+            );
 
-                console.log(
-                    "Poster not found."
-                );
-            }
+        const gross =
+            infoboxField(
+                text,
+                [
+                    "gross",
+                    "box_office"
+                ]
+            );
+
+        const language =
+            infoboxField(
+                text,
+                [
+                    "language",
+                    "languages"
+                ]
+            );
+
+        const genre =
+            infoboxField(
+                text,
+                [
+                    "genre",
+                    "genres"
+                ]
+            );
+
+        const runtime =
+            infoboxField(
+                text,
+                ["runtime"]
+            );
+
+        if (director) {
+            movie.director =
+                director;
         }
 
-        /* -------------------------------------------------
-           SAVE IN MEMORY
-        ------------------------------------------------- */
+        if (producer) {
+            movie.producer =
+                producer;
+        }
 
-        movieCache.set(
-            cacheKey,
-            movieData
+        if (
+            starring &&
+            !movie.cast.length
+        ) {
+            movie.cast =
+                people(starring);
+        }
+
+        if (music) {
+            movie.musicDirector =
+                music;
+        }
+
+        if (cinematography) {
+            movie.cinematography =
+                cinematography;
+        }
+
+        if (editing) {
+            movie.editor =
+                editing;
+        }
+
+        if (production) {
+            movie.productionCompany =
+                production;
+        }
+
+        if (released) {
+            movie.releaseDate =
+                released;
+        }
+
+        if (budget) {
+            movie.budget =
+                budget;
+        }
+
+        if (gross) {
+            movie.collection =
+                gross;
+        }
+
+        if (language) {
+            movie.language =
+                language;
+        }
+
+        if (genre) {
+            movie.genre =
+                genre;
+
+            movie.genres =
+                genre
+                    .split(",")
+                    .map(clean)
+                    .filter(Boolean);
+        }
+
+        if (runtime) {
+            movie.runtime =
+                runtime;
+        }
+
+        /* =================================================
+           FINAL RESULT
+        ================================================= */
+
+        const result =
+            normalizeMovie(
+                movie,
+                movieName
+            );
+
+        cache.set(
+            key,
+            result
         );
 
         console.log(
-            "Movie information successfully created."
+            `Movie information ready: ${result.title}`
         );
 
-        return res.json(
-            movieData
-        );
+        /*
+          IMPORTANT:
+          We return HTTP 200 even if some
+          individual fields are unavailable.
+        */
 
-    } catch (error) {
+        return res.status(200).json(
+            result
+        );
+    }
+);
 
-        console.error("");
-        console.error(
-            "=========================================="
-        );
-        console.error(
-            "MOVIE SEARCH ERROR"
-        );
-        console.error(
-            "=========================================="
-        );
-        console.error(
-            error
-        );
-        console.error(
-            "=========================================="
-        );
+/* =========================================================
+   TEST API
+========================================================= */
 
-        return res.status(500).json({
-            error:
-                "Unable to get movie information."
+app.get(
+    "/api/test",
+    (req, res) => {
+
+        res.json({
+
+            success: true,
+
+            message:
+                "MovieBuzz server is working.",
+
+            movieSources: [
+                "IMDbOT",
+                "Wikipedia",
+                "Wikidata"
+            ],
+
+            geminiRequired:
+                false,
+
+            database:
+                "NONE"
         });
     }
-});
+);
+
+/* =========================================================
+   HEALTH CHECK
+========================================================= */
+
+app.get(
+    "/health",
+    (req, res) => {
+
+        res.json({
+
+            success: true,
+
+            status:
+                "MovieBuzz server is healthy"
+        });
+    }
+);
 
 /* =========================================================
    START SERVER
@@ -835,45 +1308,20 @@ app.listen(
     HOST,
     () => {
 
-        console.log("");
         console.log(
-            "=========================================="
-        );
-        console.log(
-            "        MOVIEBUZZ SERVER STARTED"
-        );
-        console.log(
-            "=========================================="
+            `MovieBuzz running on ${HOST}:${PORT}`
         );
 
         console.log(
-            `Website: http://localhost:${PORT}`
+            "Movie source: IMDbOT + Wikipedia + Wikidata"
         );
 
         console.log(
-            "Gemini API:",
-            GEMINI_API_KEY
-                ? "Configured"
-                : "NOT CONFIGURED"
-        );
-
-        console.log(
-            "Gemini model:",
-            GEMINI_MODEL
-        );
-
-        console.log(
-            "Poster search: Wikimedia / Wikipedia"
+            "Gemini: NOT required for movie searches"
         );
 
         console.log(
             "Database: NONE"
         );
-
-        console.log(
-            "=========================================="
-        );
-
-        console.log("");
     }
 );
